@@ -1,11 +1,15 @@
 package bigdata;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
@@ -25,16 +29,86 @@ public class DataCleaning
 
     public static class DCMapper extends Mapper<LongWritable, Text, Text, GameWritable>{
 
+        private boolean first = true;
+
         @Override
-        public void map(LongWritable key, Text value, Context context){
+        public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException{
             JSONObject object = (JSONObject) JSONValue.parse(value.toString());
 
+            String date, cards1, cards2, id1, id2;
+            Double strength1, strength2;
+            int clan1, clan2, crown1, crown2;
+            DeckWritable dw1, dw2;
+            PlayerWritable p1, p2;
+
+            try {
+                date = (String) object.get("date");
+                cards1 = (String) object.get("cards"); cards2 = (String) object.get("cards2");
+                id1 = (String) object.get("player"); id2 = (String) object.get("player2");
+
+            } catch (Exception e){
+                context.getCounter("Debug", "date-error").increment(1);
+                return;
+            }
+
+            try {
+                strength1 = (Double) object.get("deck"); strength2 = (Double) object.get("deck2");
+                dw1 = new DeckWritable(cards1, strength1); dw2 = new DeckWritable(cards2, strength2);
+            } catch (Exception e){
+                context.getCounter("Debug", "Deck-error").increment(1);
+                if(first){
+                    System.out.println(e);
+                    //System.out.println(strength1 + " " + strength2);
+                    first = false;
+                }
+                return;
+            }
+
+            try {
+                clan1 = Integer.valueOf((String) object.get("clanTr")); clan2 = Integer.valueOf((String) object.get("clanTr2"));
+                p1 = new PlayerWritable(id1, dw1, clan1); p2 = new PlayerWritable(id2, dw2, clan2);
+
+            } catch (Exception e){
+                context.getCounter("Debug", "Player-error").increment(1);
+                return;
+            }
+
+            try {
+                crown1 = Integer.valueOf((String) object.get("crown")); crown2 = Integer.valueOf((String) object.get("crown2"));
+
+            } catch (Exception e){
+                context.getCounter("Debug", "crown-error").increment(1);
+                return;
+            }
+            GameWritable game = new GameWritable(date, p1, p2, crown1, crown2);
+            Text dateKey = new Text(date);
+            context.write(dateKey, game);
             
         }
     }
 
-    public static class DCReducer extends Reducer<LongWritable, Text, NullWritable, GameWritable>{
+    public static class DCReducer extends Reducer<Text, GameWritable, NullWritable, GameWritable>{
 
+        /*@Override
+        protected void setup(org.apache.hadoop.mapreduce.Mapper.Context context){}*/
+
+        @Override
+        public void reduce(Text key, Iterable<GameWritable> values, Context context) throws IOException, InterruptedException{
+            List<String> players = new ArrayList<>();
+            for(GameWritable game: values){
+                String p1 = game.getPlayerOne().getPlayerId();
+                String p2 = game.getPlayerTwo().getPlayerId();
+                if(players.size() == 0){
+                    players.add(p1); players.add(p2);
+                    context.write(NullWritable.get(), game);
+                } else {
+                    if(!(players.contains(p1) || players.contains(p2))){
+                        players.add(p1); players.add(p2);
+                        context.write(NullWritable.get(), game);
+                    }
+                }
+            }
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -43,12 +117,12 @@ public class DataCleaning
         job.setNumReduceTasks(1);
         job.setJarByClass(DataCleaning.class);
         job.setMapperClass(DCMapper.class);
-        job.setMapOutputKeyClass(LongWritable.class);
-        job.setMapOutputValueClass(Text.class);
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(GameWritable.class);
         job.setReducerClass(DCReducer.class);
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(GameWritable.class);
-        job.setOutputFormatClass(SequenceFileOutputFormat.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
         job.setInputFormatClass(TextInputFormat.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));

@@ -43,4 +43,9 @@ public class PlayerWritable implements Writable {
     public int getClanTrophies(){
         return this.clanTrophies;
     }
+
+    @Override
+    public String toString(){
+        return "player: " + this.id + ", deck: { " + this.deck.toString() + " }, clanTr: " + this.clanTrophies; 
+    }
 }

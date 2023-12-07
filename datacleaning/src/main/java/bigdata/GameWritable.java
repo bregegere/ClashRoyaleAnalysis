@@ -23,7 +23,7 @@ public class GameWritable implements Writable {
         this.crown2 = crown2;
     }
 
-    public void write(DataOutput out){
+    public void write(DataOutput out) throws IOException{
         out.writeUTF(date);
         player1.write(out);
         player2.write(out);
@@ -31,7 +31,7 @@ public class GameWritable implements Writable {
         out.writeInt(crown2);
     }
 
-    public void readFields(DataInput in){
+    public void readFields(DataInput in) throws IOException{
         this.date = in.readUTF();
         this.player1 = new PlayerWritable(); this.player1.readFields(in);
         this.player2 = new PlayerWritable(); this.player2.readFields(in);
@@ -57,5 +57,10 @@ public class GameWritable implements Writable {
 
     public int getCrownTwo(){
         return this.crown2;
+    }
+
+    @Override
+    public String toString(){
+        return "date: " + this.date + ", " + this.player1.toString() + ", " + this.player2.toString() + ", crown: " + this.crown1 + ", crown2: " + this.crown2; 
     }
 }

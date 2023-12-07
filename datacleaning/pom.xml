@@ -50,11 +50,32 @@
   			<configuration>
   				<archive>
   					<manifest>
-  						<mainClass>TP5.Join</mainClass>
+  						<mainClass>bigdata.DataCleaning</mainClass>
   					</manifest>
   				</archive>
   			</configuration>
   		</plugin>
+      <plugin>
+      <artifactId>maven-assembly-plugin</artifactId>
+      <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      <configuration>
+        <archive>
+          <manifest>
+            <mainClass>bigdata.DataCleaning</mainClass>
+          </manifest>
+        </archive>
+        <descriptorRefs>
+          <descriptorRef>jar-with-dependencies</descriptorRef>
+        </descriptorRefs>
+      </configuration>
+      </plugin>
   	</plugins>
   </build>
 </project>
