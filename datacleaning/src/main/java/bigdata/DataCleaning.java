@@ -16,16 +16,21 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 
-/**
- * Hello world!
- *
- */
+
 public class DataCleaning 
 {
 
-    public static class DCMapper extends Mapper<LongWritable, Text, LongWritable, Text>{
+    public static class DCMapper extends Mapper<LongWritable, Text, Text, GameWritable>{
 
+        @Override
+        public void map(LongWritable key, Text value, Context context){
+            JSONObject object = (JSONObject) JSONValue.parse(value.toString());
+
+            
+        }
     }
 
     public static class DCReducer extends Reducer<LongWritable, Text, NullWritable, GameWritable>{
