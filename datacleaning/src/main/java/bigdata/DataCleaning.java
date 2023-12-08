@@ -36,7 +36,7 @@ public class DataCleaning
             JSONObject object = (JSONObject) JSONValue.parse(value.toString());
 
             String date, cards1, cards2, id1, id2;
-            Double strength1, strength2;
+            double strength1, strength2;
             int clan1, clan2, crown1, crown2;
             DeckWritable dw1, dw2;
             PlayerWritable p1, p2;
@@ -52,7 +52,18 @@ public class DataCleaning
             }
 
             try {
-                strength1 = (Double) object.get("deck"); strength2 = (Double) object.get("deck2");
+                strength1 = ((Number) object.get("deck")).doubleValue(); strength2 = ((Number) object.get("deck2")).doubleValue();
+            } catch (Exception e){
+                context.getCounter("Debug", "double-error").increment(1);
+                if(first){
+                    System.out.println(e);
+                    //System.out.println(strength1 + " " + strength2);
+                    first = false;
+                }
+                return;
+            }
+
+            try {
                 dw1 = new DeckWritable(cards1, strength1); dw2 = new DeckWritable(cards2, strength2);
             } catch (Exception e){
                 context.getCounter("Debug", "Deck-error").increment(1);
@@ -65,7 +76,7 @@ public class DataCleaning
             }
 
             try {
-                clan1 = Integer.valueOf((String) object.get("clanTr")); clan2 = Integer.valueOf((String) object.get("clanTr2"));
+                clan1 = ((Long)object.get("clanTr")).intValue(); clan2 = ((Long)object.get("clanTr2")).intValue();
                 p1 = new PlayerWritable(id1, dw1, clan1); p2 = new PlayerWritable(id2, dw2, clan2);
 
             } catch (Exception e){
@@ -74,7 +85,7 @@ public class DataCleaning
             }
 
             try {
-                crown1 = Integer.valueOf((String) object.get("crown")); crown2 = Integer.valueOf((String) object.get("crown2"));
+                crown1 = ((Long)object.get("crown")).intValue(); crown2 = ((Long)object.get("crown2")).intValue();
 
             } catch (Exception e){
                 context.getCounter("Debug", "crown-error").increment(1);
