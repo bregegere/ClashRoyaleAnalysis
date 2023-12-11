@@ -50,7 +50,7 @@
   			<configuration>
   				<archive>
   					<manifest>
-  						<mainClass>bigdata.DataCleaning</mainClass>
+  						<mainClass>bigdata.GameAnalysis</mainClass>
   					</manifest>
   				</archive>
   			</configuration>

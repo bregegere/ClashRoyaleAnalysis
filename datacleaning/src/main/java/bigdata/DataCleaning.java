@@ -77,6 +77,8 @@ public class DataCleaning
 
             try {
                 clan1 = ((Long)object.get("clanTr")).intValue(); clan2 = ((Long)object.get("clanTr2")).intValue();
+                /*if(clan1 == null) clan1 = 0;
+                if(clan2 == null) clan2 = 0;*/
                 p1 = new PlayerWritable(id1, dw1, clan1); p2 = new PlayerWritable(id2, dw2, clan2);
 
             } catch (Exception e){
