@@ -68,12 +68,11 @@ public class GameAnalysis {
                     winner = game.getPlayerTwo();
                     loser = game.getPlayerOne();
                 }
-                
-                if(winner.getClanTrophies() > clanMax) clanMax = winner.getClanTrophies();
 
                 if(game.getPlayerOne().getDeck().getCards().equals(game.getPlayerTwo().getDeck().getCards())){
                     players.add(winner.getPlayerId());
                     players.add(loser.getPlayerId());
+                    if(winner.getClanTrophies() > clanMax) clanMax = winner.getClanTrophies();
                     victories++;
                     strength += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
                     games += 2;
@@ -82,6 +81,7 @@ public class GameAnalysis {
                         players.add(winner.getPlayerId());
                         victories++;
                         strength += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
+                        if(winner.getClanTrophies() > clanMax) clanMax = winner.getClanTrophies();
                     }  else {
                         players.add(loser.getPlayerId());
                     }
@@ -89,7 +89,7 @@ public class GameAnalysis {
                 }
             }
             double meanStrength = (Double) strength / games;
-            DeckAnalysisWritable daw = new DeckAnalysisWritable(victories, games, players, clanMax, meanStrength);
+            DeckAnalysisWritable daw = new DeckAnalysisWritable(key.toString(), victories, games, players, clanMax, meanStrength);
             context.write(key, daw);
         }
     }
@@ -105,8 +105,8 @@ public class GameAnalysis {
         job.setReducerClass(AnalysisReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(DeckAnalysisWritable.class);
-        job.setOutputFormatClass(TextOutputFormat.class);
-        job.setInputFormatClass(TextInputFormat.class);
+        job.setOutputFormatClass(SequenceFileOutputFormat.class);
+        job.setInputFormatClass(SequenceFileInputFormat.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
         System.exit(job.waitForCompletion(true) ? 0 : 1);

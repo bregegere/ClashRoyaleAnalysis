@@ -7,7 +7,7 @@ import java.util.HashSet;
 
 import org.apache.hadoop.io.Writable;
 
-public class DeckAnalysisWritable implements Writable{
+public class DeckAnalysisWritable implements Cloneable, Writable{
     private String deck;
     private int victories, games, clan;
     private double deltaStrength;
@@ -59,6 +59,18 @@ public class DeckAnalysisWritable implements Writable{
 
     @Override
     public String toString(){
-        return this.deck + " " + this.victories + " " + this.games + " " + this.players.size() + " " + this.clan + " " + this.deltaStrength;
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"deck\":\"" + this.deck + "\",");
+        sb.append("\"victories\":" + this.victories + ",");
+        sb.append("\"games\":" + this.games + ",");
+        sb.append("\"players\":" + this.players.size() + ",");
+        sb.append("\"clanMax\":" + this.clan + ",");
+        sb.append("\"strength\":" + this.deltaStrength + "}");
+        return sb.toString();
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException{
+        return super.clone();
     }
 }
