@@ -49,7 +49,7 @@ public class DeckTopK {
 
     protected static Comparator players = new Comparator<DeckAnalysisWritable>() {
             public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                return Integer.compare(deck1.getPlayers().size(), deck2.getGames().size());
+                return Integer.compare(deck1.getPlayers().size(), deck2.getPlayers().size());
             }
     };
 
@@ -61,7 +61,7 @@ public class DeckTopK {
 
     protected static Comparator strength = new Comparator<DeckAnalysisWritable>() {
             public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                return Double.compare((-1 * deck1.getStrength()), -1 * deck2.getStrength());
+                return Double.compare((-1 * deck1.getDeltaStrength()), -1 * deck2.getDeltaStrength());
             }
     };
 
