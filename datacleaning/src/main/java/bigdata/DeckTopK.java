@@ -31,37 +31,49 @@ public class DeckTopK {
 
     protected static Comparator ratio = new Comparator<DeckAnalysisWritable>() {
             public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                return Double.compare(((double) deck1.getVictories()) / deck1.getGames(), ((double) deck2.getVictories()) / deck2.getGames());
+                int compared = Double.compare(((double) deck1.getVictories()) / deck1.getGames(), ((double) deck2.getVictories()) / deck2.getGames());
+                if(compared != 0) return compared;
+                else return deck1.getDeck().compareTo(deck2.getDeck());
             }
     };
 
     protected static  Comparator victories = new Comparator<DeckAnalysisWritable>() {
             public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                return Integer.compare(deck1.getVictories(), deck2.getVictories());
+                int compared = Integer.compare(deck1.getVictories(), deck2.getVictories());
+                if(compared != 0) return compared;
+                else return deck1.getDeck().compareTo(deck2.getDeck());
             }
     };
 
     protected static Comparator games = new Comparator<DeckAnalysisWritable>() {
             public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                return Integer.compare(deck1.getGames(), deck2.getGames());
+                int compared = Integer.compare(deck1.getGames(), deck2.getGames());
+                if(compared != 0) return compared;
+                else return deck1.getDeck().compareTo(deck2.getDeck());
             }
     };
 
     protected static Comparator players = new Comparator<DeckAnalysisWritable>() {
             public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                return Integer.compare(deck1.getPlayers().size(), deck2.getPlayers().size());
+                int compared = Integer.compare(deck1.getPlayers().size(), deck2.getPlayers().size());
+                if(compared != 0) return compared;
+                else return deck1.getDeck().compareTo(deck2.getDeck());
             }
     };
 
     protected static Comparator clanMax = new Comparator<DeckAnalysisWritable>() {
             public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                return Integer.compare(deck1.getClan(), deck2.getClan());
+                int compared = Integer.compare(deck1.getClan(), deck2.getClan());
+                if(compared != 0) return compared;
+                else return deck1.getDeck().compareTo(deck2.getDeck());
             }
     };
 
     protected static Comparator strength = new Comparator<DeckAnalysisWritable>() {
             public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                return Double.compare((-1 * deck1.getDeltaStrength()), -1 * deck2.getDeltaStrength());
+                int compared = Double.compare((-1 * deck1.getDeltaStrength()), -1 * deck2.getDeltaStrength());
+                if(compared != 0) return compared;
+                else return deck1.getDeck().compareTo(deck2.getDeck());
             }
     };
 
