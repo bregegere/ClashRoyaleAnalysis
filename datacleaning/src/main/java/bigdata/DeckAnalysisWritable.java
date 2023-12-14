@@ -54,6 +54,7 @@ public class DeckAnalysisWritable implements Cloneable, Writable{
     public int getVictories(){ return this.victories; }
     public int getGames(){ return this.games; }
     public HashSet<String> getPlayers(){ return this.players; }
+    public int getPlayersLength(){ return this.players.size(); }
     public int getClan(){ return this.clan; }
     public double getDeltaStrength(){ return this.deltaStrength; }
 

@@ -24,10 +24,43 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
+
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.hbase.mapreduce.TableReducer;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 
 public class DeckTopK {
+
+    private static String TABLE_NAME = "tbregegere:clashroyale_test"; //IL FAUT CHANGER LE NAMESPACE
+
+    public static void createOrOverwrite(Admin admin, HTableDescriptor table) throws IOException {
+		if (admin.tableExists(table.getTableName())) {
+			admin.disableTable(table.getTableName());
+			admin.deleteTable(table.getTableName());
+		}
+		admin.createTable(table);
+	}
+	public static void createTable(Connection connect) {
+		try {
+			final Admin admin = connect.getAdmin();
+			HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
+			HColumnDescriptor fam = new HColumnDescriptor(Bytes.toBytes("deck"));
+			tableDescriptor.addFamily(fam);
+			createOrOverwrite(admin, tableDescriptor);
+			admin.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+	}
 
     protected static Comparator ratio = new Comparator<DeckAnalysisWritable>() {
             public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
@@ -135,7 +168,7 @@ public class DeckTopK {
         }
     }
 
-    public static class TopKReducer extends Reducer<NullWritable, DeckAnalysisWritable, Text, DeckAnalysisWritable>{
+    public static class TopKReducer extends TableReducer<NullWritable, DeckAnalysisWritable, IntWritable>{
 
         private int k;
         private Comparator comp;
@@ -180,21 +213,32 @@ public class DeckTopK {
                     context.getCounter("debug", "clone").increment(1);
                 }
             }
+            int i = 1;
             for(DeckAnalysisWritable deck: decks.descendingSet()){
-                context.write(new Text(deck.getDeck()), deck);
+                Put put = new Put(Bytes.toBytes(Integer.toString(i)));
+                String idBase = "";
+                if(i < 10) idBase = "00";
+                else if(id < 100) idBase = "0";
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("id"), Bytes.toBytes(idBase + deck.getDeck()));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("victories"), Bytes.toBytes(Integer.toString(deck.getVictories())));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("games"), Bytes.toBytes(Integer.toString(deck.getGames())));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("players"), Bytes.toBytes(Integer.toString(deck.getPlayersLength())));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("clanMax"), Bytes.toBytes(Integer.toString(deck.getClan())));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("strength"), Bytes.toBytes(Double.toString(deck.getDeltaStrength())));
+                
+                context.write(new IntWritable(i), put);
+                i++;
             }
         }
     }
 
     public static void main(String[] args) throws Exception {
-        Configuration conf = new Configuration();
-        int k;
+        /*Configuration conf = new Configuration();
+        int k = 100;
         String comparator;
         try{
-            k = Integer.parseInt(args[2]);
-            comparator = args[3];
+            comparator = args[2];
         } catch (Exception e){
-            k = 100;
             comparator = "ratio";
         }
         conf.setInt("k", k);
@@ -206,12 +250,38 @@ public class DeckTopK {
         job.setMapOutputKeyClass(NullWritable.class);
         job.setMapOutputValueClass(DeckAnalysisWritable.class);
         job.setReducerClass(TopKReducer.class);
-        job.setOutputKeyClass(Text.class);
+        job.setOutputKeyClass(IntWritable.class);
         job.setOutputValueClass(DeckAnalysisWritable.class);
         job.setOutputFormatClass(TextOutputFormat.class);
         job.setInputFormatClass(SequenceFileInputFormat.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        System.exit(job.waitForCompletion(true) ? 0 : 1);*/
+
+        Configuration conf = new HBaseConfiguration();
+        int k = 100;
+        String comparator;
+        TABLE_NAME = args[1];
+        try{
+            comparator = args[2];
+        } catch (Exception e){
+            comparator = "ratio";
+        }
+        conf.setInt("k", k);
+        conf.set("comparator", comparator);
+        Job job = Job.getInstance(conf, "DeckTopK");
+        job.setNumReduceTasks(1);
+        job.setJarByClass(DeckTopK.class);
+        Connection connection = ConnectionFactory.createConnection(conf);
+		createTable(connection);
+        job.setMapperClass(TopKMapper.class);
+        job.setMapOutputKeyClass(NullWritable.class);
+        job.setMapOutputValueClass(DeckAnalysisWritable.class);
+        job.setInputFormatClass(SequenceFileInputFormat.class);
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+
+        TableMapReduceUtil.initTableReducerJob(TABLE_NAME, TopKReducer.class, job);
+
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 }
