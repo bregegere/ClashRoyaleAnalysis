@@ -135,7 +135,7 @@ public class DataCleaning
         job.setReducerClass(DCReducer.class);
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(GameWritable.class);
-        job.setOutputFormatClass(TextOutputFormat.class);
+        job.setOutputFormatClass(SequenceFileOutputFormat.class);
         job.setInputFormatClass(TextInputFormat.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));

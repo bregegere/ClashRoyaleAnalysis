@@ -88,7 +88,7 @@ public class DeckTopK {
 
     protected static Comparator players = new Comparator<DeckAnalysisWritable>() {
             public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                int compared = Integer.compare(deck1.getPlayers().size(), deck2.getPlayers().size());
+                int compared = Integer.compare(deck1.getPlayers(), deck2.getPlayers());
                 if(compared != 0) return compared;
                 else return deck1.getDeck().compareTo(deck2.getDeck());
             }
@@ -111,12 +111,13 @@ public class DeckTopK {
     };
 
 
-    public static class TopKMapper extends Mapper<Text, DeckAnalysisWritable, NullWritable, DeckAnalysisWritable>{
+    public static class TopKMapper extends Mapper<Text, DeckAnalysisWritable, IntWritable, DeckAnalysisWritable>{
 
         private int k;
         private Comparator comp;
 
         private TreeSet<DeckAnalysisWritable> decks;
+        private List<TreeSet<DeckAnalysisWritable>> weekDecks;
 
         
 
@@ -146,15 +147,25 @@ public class DeckTopK {
                     break;
             }
             decks = new TreeSet<>(comp);
+            weekDecks = new ArrayList<>();
+            for(int i = 0; i < 53; i++){
+                weekDecks.add(new TreeSet<>(comp));
+            }
         }
 
         @Override
         public void map(Text key, DeckAnalysisWritable value, Context context) throws IOException, InterruptedException{
-            if(value.getGames() < 10) return;
             try{
+                int topKey = 0;
+                String[] tokens = key.toString().split(" ");
+                if(tokens.length() == 2) topKey = Integer.parseInt(tokens[0]);
                 DeckAnalysisWritable deckClone = (DeckAnalysisWritable) value.clone();
                 decks.add(deckClone);
                 if(decks.size() > k) decks.remove(decks.first());
+                if(topKey > 0){
+                    weekDecks.get(topKey).add(deckClone);
+                    if(weekDecks.get(topKey).size() > k) weekDecks.get(topKey).remove(weekDecks.get(topKey).first());
+                }
             } catch (CloneNotSupportedException e){
                 context.getCounter("debug", "clone").increment(1);
             }
@@ -163,12 +174,18 @@ public class DeckTopK {
         @Override
         protected void cleanup(Context context) throws IOException, InterruptedException{
             for(DeckAnalysisWritable deck: decks){
-                context.write(NullWritable.get(), deck);
+                context.write(new IntWritable(0), deck);
+            }
+            for(int i = 0, i < 53; i++){
+                int week = i;
+                for(DeckAnalysisWritable deck: weekDecks.get(i)){
+                    context.write(new IntWritable(week), deck);
+                }
             }
         }
     }
 
-    public static class TopKReducer extends TableReducer<NullWritable, DeckAnalysisWritable, IntWritable>{
+    public static class TopKReducer extends TableReducer<IntWritable, DeckAnalysisWritable, IntWritable>{
 
         private int k;
         private Comparator comp;
@@ -203,7 +220,7 @@ public class DeckTopK {
         }
 
         @Override
-        public void reduce(NullWritable key, Iterable<DeckAnalysisWritable> values, Context context) throws IOException, InterruptedException{
+        public void reduce(IntWritable key, Iterable<DeckAnalysisWritable> values, Context context) throws IOException, InterruptedException{
             for(DeckAnalysisWritable deck: values){
                 try{
                     DeckAnalysisWritable deckClone = (DeckAnalysisWritable) deck.clone();   
@@ -214,19 +231,18 @@ public class DeckTopK {
                 }
             }
             int i = 1;
+            int week = key.get();
             for(DeckAnalysisWritable deck: decks.descendingSet()){
-                Put put = new Put(Bytes.toBytes(Integer.toString(i)));
-                String idBase = "";
-                if(i < 10) idBase = "00";
-                else if(id < 100) idBase = "0";
-                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("id"), Bytes.toBytes(idBase + deck.getDeck()));
+                String rowKey = "week" + String.format("%02d", week) + " #" + String.format("%03d", i);
+                Put put = new Put(Bytes.toBytes(rowKey));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("id"), Bytes.toBytes(deck.getDeck()));
                 put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("victories"), Bytes.toBytes(Integer.toString(deck.getVictories())));
                 put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("games"), Bytes.toBytes(Integer.toString(deck.getGames())));
-                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("players"), Bytes.toBytes(Integer.toString(deck.getPlayersLength())));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("players"), Bytes.toBytes(Integer.toString(deck.getPlayers())));
                 put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("clanMax"), Bytes.toBytes(Integer.toString(deck.getClan())));
                 put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("strength"), Bytes.toBytes(Double.toString(deck.getDeltaStrength())));
                 
-                context.write(new IntWritable(i), put);
+                context.write(key, put);
                 i++;
             }
         }

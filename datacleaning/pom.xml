@@ -65,12 +65,12 @@
   			<configuration>
   				<archive>
   					<manifest>
-  						<mainClass>bigdata.DeckTopK</mainClass>
+  						<mainClass>bigdata.GameAnalysis</mainClass>
   					</manifest>
   				</archive>
   			</configuration>
   		</plugin>
-      <!-- <plugin>
+       <!-- <plugin>
       <artifactId>maven-assembly-plugin</artifactId>
       <executions>
           <execution>
@@ -83,14 +83,14 @@
       <configuration>
         <archive>
           <manifest>
-            <mainClass>bigdata.DeckTopK</mainClass>
+            <mainClass>bigdata.DataCleaning</mainClass>
           </manifest>
         </archive>
         <descriptorRefs>
           <descriptorRef>jar-with-dependencies</descriptorRef>
         </descriptorRefs>
       </configuration>
-      </plugin> -->
+      </plugin>  -->
   	</plugins>
   </build>
 </project>

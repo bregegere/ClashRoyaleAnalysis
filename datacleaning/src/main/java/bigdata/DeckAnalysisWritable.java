@@ -11,11 +11,11 @@ public class DeckAnalysisWritable implements Cloneable, Writable{
     private String deck;
     private int victories, games, clan;
     private double deltaStrength;
-    private HashSet<String> players;
+    private int players;
 
     DeckAnalysisWritable(){};
 
-    DeckAnalysisWritable(String deck, int vict, int games, HashSet<String> pl, int clan, double str){
+    DeckAnalysisWritable(String deck, int vict, int games, int pl, int clan, double str){
         this.deck = deck;
         this.victories = vict;
         this.games = games;
@@ -26,10 +26,7 @@ public class DeckAnalysisWritable implements Cloneable, Writable{
 
     public void write(DataOutput out) throws IOException{
         out.writeUTF(deck);
-        out.writeInt(players.size());
-        for(String str: players){
-            out.writeUTF(str);
-        }
+        out.writeInt(players);
         out.writeInt(victories);
         out.writeInt(games);
         out.writeInt(clan);
@@ -38,12 +35,7 @@ public class DeckAnalysisWritable implements Cloneable, Writable{
 
     public void readFields(DataInput in) throws IOException{
         deck = in.readUTF();
-        players = new HashSet<>();
-        int nbPlayers = in.readInt();
-        for(int i = 0; i < nbPlayers; i++){
-            String player = in.readUTF();
-            players.add(player);
-        }
+        players = in.readInt();
         this.victories = in.readInt();
         this.games = in.readInt();
         this.clan = in.readInt();
@@ -53,8 +45,7 @@ public class DeckAnalysisWritable implements Cloneable, Writable{
     public String getDeck(){ return this.deck; }
     public int getVictories(){ return this.victories; }
     public int getGames(){ return this.games; }
-    public HashSet<String> getPlayers(){ return this.players; }
-    public int getPlayersLength(){ return this.players.size(); }
+    public int getPlayers(){ return this.players; }
     public int getClan(){ return this.clan; }
     public double getDeltaStrength(){ return this.deltaStrength; }
 
@@ -64,7 +55,7 @@ public class DeckAnalysisWritable implements Cloneable, Writable{
         sb.append("{\"deck\":\"" + this.deck + "\",");
         sb.append("\"victories\":" + this.victories + ",");
         sb.append("\"games\":" + this.games + ",");
-        sb.append("\"players\":" + this.players.size() + ",");
+        sb.append("\"players\":" + this.players + ",");
         sb.append("\"clanMax\":" + this.clan + ",");
         sb.append("\"strength\":" + this.deltaStrength + "}");
         return sb.toString();
