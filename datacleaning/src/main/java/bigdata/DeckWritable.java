@@ -35,6 +35,10 @@ public class DeckWritable implements Writable {
         return this.strength;
     }
 
+    public void setCards(String newD){
+        this.cards = newD;
+    }
+
     @Override
     public String toString(){
         return "cards: " + this.cards + ", strength: " + this.strength;

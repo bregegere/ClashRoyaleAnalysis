@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -37,12 +38,26 @@ public class GameAnalysis {
             Text deck2 = new Text(value.getPlayerTwo().getDeck().getCards());
 
             if(deck1.toString().equals(deck2.toString())){
+                String deck = deck1.toString();
+                String newDeckId = orderCards(deck);
+                value.getPlayerOne().getDeck().setCards(newDeckId);
+                value.getPlayerTwo().getDeck().setCards(newDeckId);
                 context.write(deck1, value);
             } else {
-                context.write(deck1, value);
-                context.write(deck2, value);
+                String orderedDeck1 = orderCards(deck1.toString());
+                String orderedDeck2 = orderCards(deck2.toString());
+                value.getPlayerOne().getDeck().setCards(orderedDeck1);
+                value.getPlayerTwo().getDeck().setCards(orderedDeck2);
+                context.write(new Text(orderedDeck1), value);
+                context.write(new Text(orderedDeck2), value);
             }
             
+        }
+
+        protected String orderCards(String cards){
+            String[] hexValues = cards.split("(?<=\\G..)");
+            hexValues = Stream.of(hexValues).sorted().toArray(String[]::new);
+            return String.join("", hexValues);
         }
     }
 
@@ -50,13 +65,17 @@ public class GameAnalysis {
 
 
 
-        /*@Override
-        protected void setup(org.apache.hadoop.mapreduce.Mapper.Context context){}*/
+        @Override
+        protected void setup(Context context){}
 
         @Override
         public void reduce(Text key, Iterable<GameWritable> values, Context context) throws IOException, InterruptedException{
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
             HashSet<String> players = new HashSet();
+            List<HashSet<String>> weeklyPlayers = new ArrayList<>();
+            for(int i = 0; i < 53; i++){
+                weeklyPlayers.add(new HashSet<>());
+            }
             int[] weekVictories = new int[53]; int[] weekGames = new int[53]; int[] weekClanMax = new int[53];
             double[] weekStrength = new double[53];
             int victories = 0;
@@ -76,7 +95,7 @@ public class GameAnalysis {
                 Calendar cal = Calendar.getInstance();
                 cal.setTime(date);
                 //first week == 1
-                int week = cal.WEEK_OF_YEAR - 1;
+                int week = cal.get(cal.WEEK_OF_YEAR) - 1;
                 //first month == 0
                 int month = cal.MONTH;
 
@@ -92,6 +111,8 @@ public class GameAnalysis {
                 if(game.getPlayerOne().getDeck().getCards().equals(game.getPlayerTwo().getDeck().getCards())){
                     players.add(winner.getPlayerId());
                     players.add(loser.getPlayerId());
+                    weeklyPlayers.get(week).add(winner.getPlayerId());
+                    weeklyPlayers.get(week).add(loser.getPlayerId());
                     if(winner.getClanTrophies() > clanMax) clanMax = winner.getClanTrophies();
                     victories++;
                     strength += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
@@ -104,6 +125,7 @@ public class GameAnalysis {
                 } else {
                     if(winner.getDeck().getCards().equals(key.toString())){
                         players.add(winner.getPlayerId());
+                        weeklyPlayers.get(week).add(winner.getPlayerId());
                         victories++;
                         strength += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
                         if(winner.getClanTrophies() > clanMax) clanMax = winner.getClanTrophies();
@@ -113,6 +135,7 @@ public class GameAnalysis {
                         if(winner.getClanTrophies() > weekClanMax[week]) weekClanMax[week] = winner.getClanTrophies();
                     }  else {
                         players.add(loser.getPlayerId());
+                        weeklyPlayers.get(week).add(loser.getPlayerId());
                     }
                     games++;
                     weekGames[week]++;
@@ -126,8 +149,9 @@ public class GameAnalysis {
             for(int i = 0; i < 53; i++){
                 if(weekGames[i] >= 5){
                     double meanStrength = (Double) weekStrength[i] / weekGames[i];
-                    DeckAnalysisWritable daw = new DeckAnalysisWritable(key.toString(), weekVictories[i], weekGames[i], players.size(), weekClanMax[i], meanStrength);
-                    Text weekKey = new Text(i + " " + key.toString());
+                    DeckAnalysisWritable daw = new DeckAnalysisWritable(key.toString(), weekVictories[i], weekGames[i], weeklyPlayers.get(i).size(), weekClanMax[i], meanStrength);
+                    int weekId = i;
+                    Text weekKey = new Text(weekId + " " + key.toString());
                     context.write(weekKey, daw);
                 }
             }
@@ -145,7 +169,7 @@ public class GameAnalysis {
         job.setReducerClass(AnalysisReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(DeckAnalysisWritable.class);
-        job.setOutputFormatClass(TextOutputFormat.class);
+        job.setOutputFormatClass(SequenceFileOutputFormat.class);
         job.setInputFormatClass(SequenceFileInputFormat.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));

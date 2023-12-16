@@ -158,13 +158,14 @@ public class DeckTopK {
             try{
                 int topKey = 0;
                 String[] tokens = key.toString().split(" ");
-                if(tokens.length() == 2) topKey = Integer.parseInt(tokens[0]);
+                if(tokens.length == 2) topKey = Integer.parseInt(tokens[0]);
                 DeckAnalysisWritable deckClone = (DeckAnalysisWritable) value.clone();
-                decks.add(deckClone);
-                if(decks.size() > k) decks.remove(decks.first());
                 if(topKey > 0){
                     weekDecks.get(topKey).add(deckClone);
                     if(weekDecks.get(topKey).size() > k) weekDecks.get(topKey).remove(weekDecks.get(topKey).first());
+                } else {
+                    decks.add(deckClone);
+                    if(decks.size() > k) decks.remove(decks.first());
                 }
             } catch (CloneNotSupportedException e){
                 context.getCounter("debug", "clone").increment(1);
@@ -176,7 +177,7 @@ public class DeckTopK {
             for(DeckAnalysisWritable deck: decks){
                 context.write(new IntWritable(0), deck);
             }
-            for(int i = 0, i < 53; i++){
+            for(int i = 0; i < 53; i++){
                 int week = i;
                 for(DeckAnalysisWritable deck: weekDecks.get(i)){
                     context.write(new IntWritable(week), deck);
@@ -189,7 +190,6 @@ public class DeckTopK {
 
         private int k;
         private Comparator comp;
-        private TreeSet<DeckAnalysisWritable> decks;
 
         @Override
         protected void setup(Context context){
@@ -216,14 +216,14 @@ public class DeckTopK {
                     comp = DeckTopK.strength;
                     break;
             }
-            decks = new TreeSet<>(comp);
         }
 
         @Override
         public void reduce(IntWritable key, Iterable<DeckAnalysisWritable> values, Context context) throws IOException, InterruptedException{
+            TreeSet<DeckAnalysisWritable> decks = new TreeSet<>(comp);
             for(DeckAnalysisWritable deck: values){
                 try{
-                    DeckAnalysisWritable deckClone = (DeckAnalysisWritable) deck.clone();   
+                    DeckAnalysisWritable deckClone = (DeckAnalysisWritable) deck.clone();
                     decks.add(deckClone);
                     if(decks.size() > k) decks.remove(decks.first());
                 } catch (CloneNotSupportedException e){
@@ -233,7 +233,12 @@ public class DeckTopK {
             int i = 1;
             int week = key.get();
             for(DeckAnalysisWritable deck: decks.descendingSet()){
-                String rowKey = "week" + String.format("%02d", week) + " #" + String.format("%03d", i);
+                String rowKey;
+                if(week == 0){
+                    rowKey = "global #" + i;
+                } else {
+                    rowKey = "week" + week + " #" + i;
+                }
                 Put put = new Put(Bytes.toBytes(rowKey));
                 put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("id"), Bytes.toBytes(deck.getDeck()));
                 put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("victories"), Bytes.toBytes(Integer.toString(deck.getVictories())));
@@ -246,6 +251,8 @@ public class DeckTopK {
                 i++;
             }
         }
+
+
     }
 
     public static void main(String[] args) throws Exception {
@@ -291,7 +298,7 @@ public class DeckTopK {
         Connection connection = ConnectionFactory.createConnection(conf);
 		createTable(connection);
         job.setMapperClass(TopKMapper.class);
-        job.setMapOutputKeyClass(NullWritable.class);
+        job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(DeckAnalysisWritable.class);
         job.setInputFormatClass(SequenceFileInputFormat.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
