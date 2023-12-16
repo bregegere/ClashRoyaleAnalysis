@@ -70,7 +70,7 @@
   				</archive>
   			</configuration>
   		</plugin>
-      <plugin>
+      <!--- <plugin>
       <artifactId>maven-assembly-plugin</artifactId>
       <executions>
           <execution>
@@ -90,7 +90,7 @@
           <descriptorRef>jar-with-dependencies</descriptorRef>
         </descriptorRefs>
       </configuration>
-      </plugin>
+      </plugin> -->
   	</plugins>
   </build>
 </project>
