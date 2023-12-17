@@ -65,7 +65,7 @@
   			<configuration>
   				<archive>
   					<manifest>
-  						<mainClass>bigdata.DeckTopK</mainClass>
+  						<mainClass>bigdata.GameAnalysis</mainClass>
   					</manifest>
   				</archive>
   			</configuration>

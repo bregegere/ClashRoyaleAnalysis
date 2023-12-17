@@ -76,8 +76,14 @@ public class GameAnalysis {
             for(int i = 0; i < 53; i++){
                 weeklyPlayers.add(new HashSet<>());
             }
+            List<HashSet<String>> monthlyPlayers = new ArrayList<>();
+            for(int i = 0; i < 12; i++){
+                monthlyPlayers.add(new HashSet<>());
+            }
             int[] weekVictories = new int[53]; int[] weekGames = new int[53]; int[] weekClanMax = new int[53];
             double[] weekStrength = new double[53];
+            int[] monthVictories = new int[12]; int[] monthGames = new int[12]; int[] monthClanMax = new int[12];
+            double[] monthStrength = new double[12];
             int victories = 0;
             int games = 0;
             int clanMax = 0;
@@ -97,7 +103,7 @@ public class GameAnalysis {
                 //first week == 1
                 int week = cal.get(cal.WEEK_OF_YEAR) - 1;
                 //first month == 0
-                int month = cal.MONTH;
+                int month = cal.get(cal.MONTH);
 
                 PlayerWritable winner, loser;
                 if(game.getCrownOne() > game.getCrownTwo()){
@@ -113,6 +119,9 @@ public class GameAnalysis {
                     players.add(loser.getPlayerId());
                     weeklyPlayers.get(week).add(winner.getPlayerId());
                     weeklyPlayers.get(week).add(loser.getPlayerId());
+                    monthlyPlayers.get(month).add(winner.getPlayerId());
+                    monthlyPlayers.get(month).add(loser.getPlayerId());
+
                     if(winner.getClanTrophies() > clanMax) clanMax = winner.getClanTrophies();
                     victories++;
                     strength += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
@@ -122,10 +131,17 @@ public class GameAnalysis {
                     weekVictories[week]++;
                     weekStrength[week] += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
                     weekGames[week] += 2;
+
+                    if(winner.getClanTrophies() > monthClanMax[month]) monthClanMax[month] = winner.getClanTrophies();
+                    monthVictories[month]++;
+                    monthStrength[month] += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
+                    monthGames[month] += 2;
                 } else {
                     if(winner.getDeck().getCards().equals(key.toString())){
                         players.add(winner.getPlayerId());
                         weeklyPlayers.get(week).add(winner.getPlayerId());
+                        monthlyPlayers.get(month).add(winner.getPlayerId());
+
                         victories++;
                         strength += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
                         if(winner.getClanTrophies() > clanMax) clanMax = winner.getClanTrophies();
@@ -133,12 +149,18 @@ public class GameAnalysis {
                         weekVictories[week]++;
                         weekStrength[week] += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
                         if(winner.getClanTrophies() > weekClanMax[week]) weekClanMax[week] = winner.getClanTrophies();
+
+                        monthVictories[month]++;
+                        monthStrength[month] += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
+                        if(winner.getClanTrophies() > monthClanMax[month]) monthClanMax[month] = winner.getClanTrophies();
                     }  else {
                         players.add(loser.getPlayerId());
                         weeklyPlayers.get(week).add(loser.getPlayerId());
+                        monthlyPlayers.get(month).add(loser.getPlayerId());
                     }
                     games++;
                     weekGames[week]++;
+                    monthGames[month]++;
                 }
             }
             if(games >= 10){
@@ -153,6 +175,15 @@ public class GameAnalysis {
                     int weekId = i;
                     Text weekKey = new Text(weekId + " " + key.toString());
                     context.write(weekKey, daw);
+                }
+            }
+            for(int i = 0; i < 12; i++){
+                if(monthGames[i] >= 10){
+                    double meanStrength = (Double) monthStrength[i] / monthGames[i];
+                    DeckAnalysisWritable daw = new DeckAnalysisWritable(key.toString(), monthVictories[i], monthGames[i], monthlyPlayers.get(i).size(), monthClanMax[i], meanStrength);
+                    int monthId = i + 53;
+                    Text monthKey = new Text(monthId + " " + key.toString());
+                    context.write(monthKey, daw);
                 }
             }
         }
