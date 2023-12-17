@@ -44,6 +44,7 @@ public class DataCleaning
             try {
                 date = (String) object.get("date");
                 cards1 = (String) object.get("cards"); cards2 = (String) object.get("cards2");
+                if(cards1.length() > 16 || cards2.length() > 16) return;
                 id1 = (String) object.get("player"); id2 = (String) object.get("player2");
 
             } catch (Exception e){

@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>DataCleaning</groupId>
-  <artifactId>decktopk</artifactId>
+  <artifactId>clashroyale-mapred</artifactId>
   <version>1.0</version>
 
   <name>datacleaning</name>
@@ -65,32 +65,11 @@
   			<configuration>
   				<archive>
   					<manifest>
-  						<mainClass>bigdata.DeckTopK</mainClass>
+  						<mainClass>bigdata.CRAnalysis</mainClass>
   					</manifest>
   				</archive>
   			</configuration>
   		</plugin>
-      <!--- <plugin>
-      <artifactId>maven-assembly-plugin</artifactId>
-      <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-      <configuration>
-        <archive>
-          <manifest>
-            <mainClass>bigdata.DeckTopK</mainClass>
-          </manifest>
-        </archive>
-        <descriptorRefs>
-          <descriptorRef>jar-with-dependencies</descriptorRef>
-        </descriptorRefs>
-      </configuration>
-      </plugin> -->
   	</plugins>
   </build>
 </project>

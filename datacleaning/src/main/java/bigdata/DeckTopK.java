@@ -15,6 +15,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.Job;
@@ -48,10 +49,10 @@ public class DeckTopK {
 		}
 		admin.createTable(table);
 	}
-	public static void createTable(Connection connect) {
+	public static void createTable(Connection connect, String table) {
 		try {
 			final Admin admin = connect.getAdmin();
-			HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
+			HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(table));
 			HColumnDescriptor fam = new HColumnDescriptor(Bytes.toBytes("deck"));
 			tableDescriptor.addFamily(fam);
 			createOrOverwrite(admin, tableDescriptor);
@@ -317,7 +318,7 @@ public class DeckTopK {
         job.setNumReduceTasks(1);
         job.setJarByClass(DeckTopK.class);
         Connection connection = ConnectionFactory.createConnection(conf);
-		createTable(connection);
+		createTable(connection, TABLE_NAME);
         job.setMapperClass(TopKMapper.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(DeckAnalysisWritable.class);
