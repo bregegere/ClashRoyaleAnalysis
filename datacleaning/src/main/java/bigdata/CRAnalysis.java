@@ -1,6 +1,7 @@
 package bigdata;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -78,6 +79,11 @@ public class CRAnalysis {
 
         TableMapReduceUtil.initTableReducerJob(TABLE_NAME, TopKReducer.class, job3);
 
-        System.exit(job3.waitForCompletion(true) ? 0 : 1);
+        if(!job3.waitForCompletion(true)){
+            System.exit(1);
+        }
+        FileSystem fs = FileSystem.get(conf);
+        fs.delete(new Path(tmpDirectory), true);
+        System.exit(0);
     }
 }
