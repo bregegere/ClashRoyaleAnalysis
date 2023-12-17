@@ -138,7 +138,6 @@ public class DeckTopK {
             decks.add(new TreeSet<>(DeckTopK.clanMax));
             decks.add(new TreeSet<>(DeckTopK.strength));*/
             addAllTypesOfTree(decks);
-            addAllTypesOfTree(octoberDecks);
             for(int i = 0; i < 65; i++){
                 weekDecksRatio.add(new TreeSet<>(DeckTopK.ratio));
                 weekDecksVictories.add(new TreeSet<>(DeckTopK.victories));
@@ -149,7 +148,7 @@ public class DeckTopK {
             }
         }
 
-        protected void addAllTypesOfTree(List<TreeSet> list){
+        protected void addAllTypesOfTree(List<TreeSet<DeckAnalysisWritable>> list){
             list.add(new TreeSet<>(DeckTopK.ratio));
             list.add(new TreeSet<>(DeckTopK.victories));
             list.add(new TreeSet<>(DeckTopK.games));
@@ -290,7 +289,7 @@ public class DeckTopK {
                     rowKey = "week" + week + "-" + criteria + " #" + i;
                     //week40-1 #31
                 } else {
-                    rowKey = "month" + week + "-" + criteria + " #" + i;
+                    rowKey = "month" + (week - 53) + "-" + criteria + " #" + i;
                 }
                 Put put = new Put(Bytes.toBytes(rowKey));
                 put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("id"), Bytes.toBytes(deck.getDeck()));

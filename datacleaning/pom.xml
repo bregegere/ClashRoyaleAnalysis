@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>DataCleaning</groupId>
-  <artifactId>bigdata</artifactId>
+  <artifactId>decktopk</artifactId>
   <version>1.0</version>
 
   <name>datacleaning</name>
@@ -65,7 +65,7 @@
   			<configuration>
   				<archive>
   					<manifest>
-  						<mainClass>bigdata.GameAnalysis</mainClass>
+  						<mainClass>bigdata.DeckTopK</mainClass>
   					</manifest>
   				</archive>
   			</configuration>

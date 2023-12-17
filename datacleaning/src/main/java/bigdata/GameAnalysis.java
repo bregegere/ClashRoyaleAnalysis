@@ -169,7 +169,7 @@ public class GameAnalysis {
                 context.write(key, daw);
             }
             for(int i = 0; i < 53; i++){
-                if(weekGames[i] >= 5){
+                if(weekGames[i] >= 10){
                     double meanStrength = (Double) weekStrength[i] / weekGames[i];
                     DeckAnalysisWritable daw = new DeckAnalysisWritable(key.toString(), weekVictories[i], weekGames[i], weeklyPlayers.get(i).size(), weekClanMax[i], meanStrength);
                     int weekId = i;
