@@ -40,6 +40,7 @@ public class DataCleaning
             int clan1, clan2, crown1, crown2;
             DeckWritable dw1, dw2;
             PlayerWritable p1, p2;
+            int round;
 
             try {
                 date = (String) object.get("date");
@@ -89,13 +90,13 @@ public class DataCleaning
 
             try {
                 crown1 = ((Long)object.get("crown")).intValue(); crown2 = ((Long)object.get("crown2")).intValue();
-
+                round = ((Long)object.get("round")).intValue();
             } catch (Exception e){
                 context.getCounter("Debug", "crown-error").increment(1);
                 return;
             }
             GameWritable game = new GameWritable(date, p1, p2, crown1, crown2);
-            Text dateKey = new Text(date);
+            Text dateKey = new Text(date + "-" + round);
             context.write(dateKey, game);
             
         }
