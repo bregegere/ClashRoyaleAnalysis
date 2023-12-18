@@ -42,7 +42,7 @@ public class GameAnalysis {
                 String newDeckId = orderCards(deck);
                 value.getPlayerOne().getDeck().setCards(newDeckId);
                 value.getPlayerTwo().getDeck().setCards(newDeckId);
-                context.write(deck1, value);
+                context.write(new Text(newDeckId), value);
             } else {
                 String orderedDeck1 = orderCards(deck1.toString());
                 String orderedDeck2 = orderCards(deck2.toString());
@@ -70,6 +70,7 @@ public class GameAnalysis {
 
         @Override
         public void reduce(Text key, Iterable<GameWritable> values, Context context) throws IOException, InterruptedException{
+            //instantiation des variables pour l'ensemble des données, chaque semaine et chaque mois
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
             HashSet<String> players = new HashSet();
             List<HashSet<String>> weeklyPlayers = new ArrayList<>();
@@ -105,6 +106,7 @@ public class GameAnalysis {
                 //first month == 0
                 int month = cal.get(cal.MONTH);
 
+                //on définit le gagnant et le perdant
                 PlayerWritable winner, loser;
                 if(game.getCrownOne() > game.getCrownTwo()){
                     winner = game.getPlayerOne();
@@ -114,6 +116,7 @@ public class GameAnalysis {
                     loser = game.getPlayerOne();
                 }
 
+                //si les deux joueurs ont le même deck
                 if(game.getPlayerOne().getDeck().getCards().equals(game.getPlayerTwo().getDeck().getCards())){
                     players.add(winner.getPlayerId());
                     players.add(loser.getPlayerId());
@@ -137,6 +140,7 @@ public class GameAnalysis {
                     monthStrength[month] += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
                     monthGames[month] += 2;
                 } else {
+                    //si le joueur qui utilisait le deck a gagné
                     if(winner.getDeck().getCards().equals(key.toString())){
                         players.add(winner.getPlayerId());
                         weeklyPlayers.get(week).add(winner.getPlayerId());
@@ -154,6 +158,7 @@ public class GameAnalysis {
                         monthStrength[month] += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
                         if(winner.getClanTrophies() > monthClanMax[month]) monthClanMax[month] = winner.getClanTrophies();
                     }  else {
+                        //s'il a perdu
                         players.add(loser.getPlayerId());
                         weeklyPlayers.get(week).add(loser.getPlayerId());
                         monthlyPlayers.get(month).add(loser.getPlayerId());
@@ -163,24 +168,29 @@ public class GameAnalysis {
                     monthGames[month]++;
                 }
             }
+            //données globales du deck
             if(games >= 10){
                 double meanStrength = (Double) strength / games;
                 DeckAnalysisWritable daw = new DeckAnalysisWritable(key.toString(), victories, games, players.size(), clanMax, meanStrength);
                 context.write(key, daw);
             }
+            //données hebdomadaires
             for(int i = 0; i < 53; i++){
                 if(weekGames[i] >= 10){
                     double meanStrength = (Double) weekStrength[i] / weekGames[i];
                     DeckAnalysisWritable daw = new DeckAnalysisWritable(key.toString(), weekVictories[i], weekGames[i], weeklyPlayers.get(i).size(), weekClanMax[i], meanStrength);
+                    //les semaines ont un id entre 0 et 52
                     int weekId = i;
                     Text weekKey = new Text(weekId + " " + key.toString());
                     context.write(weekKey, daw);
                 }
             }
+            //données mensuelles
             for(int i = 0; i < 12; i++){
                 if(monthGames[i] >= 10){
                     double meanStrength = (Double) monthStrength[i] / monthGames[i];
                     DeckAnalysisWritable daw = new DeckAnalysisWritable(key.toString(), monthVictories[i], monthGames[i], monthlyPlayers.get(i).size(), monthClanMax[i], meanStrength);
+                    //les mois ont un id entre 53 et 64
                     int monthId = i + 53;
                     Text monthKey = new Text(monthId + " " + key.toString());
                     context.write(monthKey, daw);

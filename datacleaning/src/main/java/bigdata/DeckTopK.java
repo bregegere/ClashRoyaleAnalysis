@@ -116,7 +116,6 @@ public class DeckTopK {
 
         private int k;
 
-        //private TreeSet<DeckAnalysisWritable> decks;
         private List<TreeSet<DeckAnalysisWritable>> decks;
         private List<TreeSet<DeckAnalysisWritable>> weekDecksRatio = new ArrayList<>();
         private List<TreeSet<DeckAnalysisWritable>> weekDecksVictories = new ArrayList<>();
@@ -132,12 +131,6 @@ public class DeckTopK {
             Configuration conf = context.getConfiguration();
             k = conf.getInt("k", 100);
             decks = new ArrayList<>();
-            /*decks.add(new TreeSet<>(DeckTopK.ratio));
-            decks.add(new TreeSet<>(DeckTopK.victories));
-            decks.add(new TreeSet<>(DeckTopK.games));
-            decks.add(new TreeSet<>(DeckTopK.players));
-            decks.add(new TreeSet<>(DeckTopK.clanMax));
-            decks.add(new TreeSet<>(DeckTopK.strength));*/
             addAllTypesOfTree(decks);
             for(int i = 0; i < 65; i++){
                 weekDecksRatio.add(new TreeSet<>(DeckTopK.ratio));
@@ -180,14 +173,19 @@ public class DeckTopK {
             } else {
                 weekDecksRatio.get(topKey).add(deckClone);
                 if(weekDecksRatio.get(topKey).size() > k) weekDecksRatio.get(topKey).remove(weekDecksRatio.get(topKey).first());
+
                 weekDecksVictories.get(topKey).add(deckClone);
                 if(weekDecksVictories.get(topKey).size() > k) weekDecksVictories.get(topKey).remove(weekDecksVictories.get(topKey).first());
+
                 weekDecksGames.get(topKey).add(deckClone);
                 if(weekDecksGames.get(topKey).size() > k) weekDecksGames.get(topKey).remove(weekDecksGames.get(topKey).first());
+
                 weekDecksPlayers.get(topKey).add(deckClone);
                 if(weekDecksPlayers.get(topKey).size() > k) weekDecksPlayers.get(topKey).remove(weekDecksPlayers.get(topKey).first());
+
                 weekDecksclanMax.get(topKey).add(deckClone);
                 if(weekDecksclanMax.get(topKey).size() > k) weekDecksclanMax.get(topKey).remove(weekDecksclanMax.get(topKey).first());
+
                 weekDecksStrength.get(topKey).add(deckClone);
                 if(weekDecksStrength.get(topKey).size() > k) weekDecksStrength.get(topKey).remove(weekDecksStrength.get(topKey).first());
             }
