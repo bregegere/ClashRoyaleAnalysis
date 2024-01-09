@@ -61,6 +61,17 @@ public class DeckAnalysisWritable implements Cloneable, Writable{
         return sb.toString();
     }
 
+    public String text(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.deck + " ");
+        sb.append(this.victories + " ");
+        sb.append(this.games + " ");
+        sb.append(this.players + " ");
+        sb.append(this.clan + " ");
+        sb.append(this.deltaStrength);
+        return sb.toString();
+    }
+
     @Override
     protected Object clone() throws CloneNotSupportedException{
         return super.clone();

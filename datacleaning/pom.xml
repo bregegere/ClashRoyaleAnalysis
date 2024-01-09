@@ -5,8 +5,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>DataCleaning</groupId>
-  <artifactId>clashroyale-mapred</artifactId>
-  <version>1.0.1</version>
+  <artifactId>clashroyale-spark</artifactId>
+  <version>1.0.0</version>
 
   <name>datacleaning</name>
   <!-- FIXME change it to the project's website -->
@@ -24,6 +24,11 @@
       <artifactId>junit</artifactId>
       <version>3.8.1</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_2.12</artifactId>
+      <version>3.1.1</version>
     </dependency>
     <dependency>
   		<groupId>org.apache.hadoop</groupId>
@@ -65,7 +70,7 @@
   			<configuration>
   				<archive>
   					<manifest>
-  						<mainClass>bigdata.CRAnalysis</mainClass>
+  						<mainClass>bigdata.Ngrams</mainClass>
   					</manifest>
   				</archive>
   			</configuration>

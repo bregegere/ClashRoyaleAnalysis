@@ -82,8 +82,8 @@ public class CRAnalysis {
         if(!job3.waitForCompletion(true)){
             System.exit(1);
         }
-        FileSystem fs = FileSystem.get(conf);
-        fs.delete(new Path(tmpDirectory), true);
+        /*FileSystem fs = FileSystem.get(conf);
+        fs.delete(new Path(tmpDirectory), true);*/
         System.exit(0);
     }
 }
