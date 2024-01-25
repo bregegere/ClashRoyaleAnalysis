@@ -96,7 +96,8 @@ public class DataCleaning
                 return;
             }
             GameWritable game = new GameWritable(date, p1, p2, crown1, crown2);
-            Text dateKey = new Text(date + "-" + round);
+            String firstPlayerId = (p1.getPlayerId().compareTo(p2.getPlayerId()) == -1 ? p1.getPlayerId() : p2.getPlayerId());
+            Text dateKey = new Text(date + "-" + round + "-" + firstPlayerId);
             context.write(dateKey, game);
             
         }
@@ -109,7 +110,10 @@ public class DataCleaning
 
         @Override
         public void reduce(Text key, Iterable<GameWritable> values, Context context) throws IOException, InterruptedException{
-            List<String> players = new ArrayList<>();
+            GameWritable value = values.iterator().next();
+            context.write(NullWritable.get(), value);
+
+            /*List<String> players = new ArrayList<>();
             for(GameWritable game: values){
                 String p1 = game.getPlayerOne().getPlayerId();
                 String p2 = game.getPlayerTwo().getPlayerId();
@@ -122,7 +126,7 @@ public class DataCleaning
                         context.write(NullWritable.get(), game);
                     }
                 }
-            }
+            }*/
         }
     }
 

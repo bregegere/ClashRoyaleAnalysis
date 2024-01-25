@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.*;
@@ -30,26 +31,62 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
 public class GameAnalysis {
-    public static class AnalysisMapper extends Mapper<NullWritable, GameWritable, Text, GameWritable>{
+    public static class AnalysisMapper extends Mapper<NullWritable, GameWritable, Text, StatsWritable>{
+
+        private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
         @Override
-        public void map(NullWritable key, GameWritable value, Context context) throws IOException, InterruptedException{
+        public void map(NullWritable key, GameWritable value, Context context) throws IOException, InterruptedException{            
             Text deck1 = new Text(value.getPlayerOne().getDeck().getCards());
             Text deck2 = new Text(value.getPlayerTwo().getDeck().getCards());
+            String orderedDeck1 = orderCards(deck1.toString());
+            String orderedDeck2 = orderCards(deck2.toString());
 
-            if(deck1.toString().equals(deck2.toString())){
-                String deck = deck1.toString();
-                String newDeckId = orderCards(deck);
-                value.getPlayerOne().getDeck().setCards(newDeckId);
-                value.getPlayerTwo().getDeck().setCards(newDeckId);
-                context.write(new Text(newDeckId), value);
+            String day = value.getDate().split("T")[0];
+            Date date;
+            try{
+                date = dateFormat.parse(day);
+            } catch (Exception e){
+                return;
+            }
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+
+            //first week == 1
+            int week = cal.get(cal.WEEK_OF_YEAR) - 1;
+            //first month == 0
+            int month = cal.get(cal.MONTH);
+
+            int clan = (value.getCrownOne() > value.getCrownTwo() ? value.getPlayerOne().getClanTrophies() : value.getPlayerTwo().getClanTrophies());
+            double strength = (value.getCrownOne() > value.getCrownTwo() ? 
+            value.getPlayerOne().getDeck().getStrength() - value.getPlayerTwo().getDeck().getStrength()
+            : value.getPlayerTwo().getDeck().getStrength() - value.getPlayerOne().getDeck().getStrength());
+
+            if(orderedDeck1.equals(orderedDeck2)){
+                HashSet<String> players = new HashSet<>();
+                players.add(value.getPlayerOne().getPlayerId());
+                players.add(value.getPlayerTwo().getPlayerId());
+
+                String newDeckId = orderedDeck1;
+
+                context.write(new Text(newDeckId), new StatsWritable(newDeckId, 2, 1, clan, players, strength));
+                context.write(new Text(week + " " + newDeckId), new StatsWritable(newDeckId, 2, 1, clan, players, strength));
+                context.write(new Text((month + 53) + " " + newDeckId), new StatsWritable(newDeckId, 2, 1, clan, players, strength));
             } else {
-                String orderedDeck1 = orderCards(deck1.toString());
-                String orderedDeck2 = orderCards(deck2.toString());
-                value.getPlayerOne().getDeck().setCards(orderedDeck1);
-                value.getPlayerTwo().getDeck().setCards(orderedDeck2);
-                context.write(new Text(orderedDeck1), value);
-                context.write(new Text(orderedDeck2), value);
+                HashSet<String> players1 = new HashSet<>();
+                HashSet<String> players2 = new HashSet<>();
+                players1.add(value.getPlayerOne().getPlayerId());
+                players2.add(value.getPlayerTwo().getPlayerId());
+
+                int victory = (value.getCrownOne() > value.getCrownTwo() ? 1 : 0);
+
+                context.write(new Text(orderedDeck1), new StatsWritable(orderedDeck1, 1, victory, victory * clan, players1, victory * strength));
+                context.write(new Text(week + " " + orderedDeck1), new StatsWritable(orderedDeck1, 1, victory, victory * clan, players1, victory * strength));
+                context.write(new Text((month + 53) + " " + orderedDeck1), new StatsWritable(orderedDeck1, 1, victory, victory * clan, players1, victory * strength));
+
+                context.write(new Text(orderedDeck2), new StatsWritable(orderedDeck2, 1, 1 - victory, (1 - victory) * clan, players2, (1 - victory) * strength));
+                context.write(new Text(week + " " + orderedDeck2), new StatsWritable(orderedDeck2, 1, 1 - victory, (1 - victory) * clan, players2, (1 - victory) * strength));
+                context.write(new Text((month + 53) + " " + orderedDeck2), new StatsWritable(orderedDeck2, 1, 1 - victory, (1 - victory) * clan, players2, (1 - victory) * strength));
             }
             
         }
@@ -61,7 +98,7 @@ public class GameAnalysis {
         }
     }
 
-    public static class AnalysisReducer extends Reducer<Text, GameWritable, Text, DeckAnalysisWritable>{
+    public static class AnalysisReducer extends Reducer<Text, StatsWritable, Text, StatsWritable>{
 
 
 
@@ -69,133 +106,22 @@ public class GameAnalysis {
         protected void setup(Context context){}
 
         @Override
-        public void reduce(Text key, Iterable<GameWritable> values, Context context) throws IOException, InterruptedException{
-            //instantiation des variables pour l'ensemble des données, chaque semaine et chaque mois
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-            HashSet<String> players = new HashSet();
-            List<HashSet<String>> weeklyPlayers = new ArrayList<>();
-            for(int i = 0; i < 53; i++){
-                weeklyPlayers.add(new HashSet<>());
-            }
-            List<HashSet<String>> monthlyPlayers = new ArrayList<>();
-            for(int i = 0; i < 12; i++){
-                monthlyPlayers.add(new HashSet<>());
-            }
-            int[] weekVictories = new int[53]; int[] weekGames = new int[53]; int[] weekClanMax = new int[53];
-            double[] weekStrength = new double[53];
-            int[] monthVictories = new int[12]; int[] monthGames = new int[12]; int[] monthClanMax = new int[12];
-            double[] monthStrength = new double[12];
-            int victories = 0;
-            int games = 0;
-            int clanMax = 0;
-            double strength = 0;
+        public void reduce(Text key, Iterable<StatsWritable> values, Context context) throws IOException, InterruptedException{
 
-            
-            for(GameWritable game: values){
-                String day = game.getDate().split("T")[0];
-                Date date;
-                try{
-                    date = dateFormat.parse(day);
-                } catch (Exception e){
-                    return;
+            Iterator<StatsWritable> iterator = values.iterator();
+            StatsWritable stats =  (StatsWritable) iterator.next().clone();
+
+            while(iterator.hasNext()){
+                StatsWritable game = iterator.next();
+                stats.games += game.games;
+                stats.victories += game.victories;
+                for(String player: game.players){
+                    stats.players.add(player);
                 }
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(date);
-                //first week == 1
-                int week = cal.get(cal.WEEK_OF_YEAR) - 1;
-                //first month == 0
-                int month = cal.get(cal.MONTH);
-
-                //on définit le gagnant et le perdant
-                PlayerWritable winner, loser;
-                if(game.getCrownOne() > game.getCrownTwo()){
-                    winner = game.getPlayerOne();
-                    loser = game.getPlayerTwo();
-                } else {
-                    winner = game.getPlayerTwo();
-                    loser = game.getPlayerOne();
-                }
-
-                //si les deux joueurs ont le même deck
-                if(game.getPlayerOne().getDeck().getCards().equals(game.getPlayerTwo().getDeck().getCards())){
-                    players.add(winner.getPlayerId());
-                    players.add(loser.getPlayerId());
-                    weeklyPlayers.get(week).add(winner.getPlayerId());
-                    weeklyPlayers.get(week).add(loser.getPlayerId());
-                    monthlyPlayers.get(month).add(winner.getPlayerId());
-                    monthlyPlayers.get(month).add(loser.getPlayerId());
-
-                    if(winner.getClanTrophies() > clanMax) clanMax = winner.getClanTrophies();
-                    victories++;
-                    strength += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
-                    games += 2;
-                    
-                    if(winner.getClanTrophies() > weekClanMax[week]) weekClanMax[week] = winner.getClanTrophies();
-                    weekVictories[week]++;
-                    weekStrength[week] += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
-                    weekGames[week] += 2;
-
-                    if(winner.getClanTrophies() > monthClanMax[month]) monthClanMax[month] = winner.getClanTrophies();
-                    monthVictories[month]++;
-                    monthStrength[month] += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
-                    monthGames[month] += 2;
-                } else {
-                    //si le joueur qui utilisait le deck a gagné
-                    if(winner.getDeck().getCards().equals(key.toString())){
-                        players.add(winner.getPlayerId());
-                        weeklyPlayers.get(week).add(winner.getPlayerId());
-                        monthlyPlayers.get(month).add(winner.getPlayerId());
-
-                        victories++;
-                        strength += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
-                        if(winner.getClanTrophies() > clanMax) clanMax = winner.getClanTrophies();
-
-                        weekVictories[week]++;
-                        weekStrength[week] += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
-                        if(winner.getClanTrophies() > weekClanMax[week]) weekClanMax[week] = winner.getClanTrophies();
-
-                        monthVictories[month]++;
-                        monthStrength[month] += (winner.getDeck().getStrength() - loser.getDeck().getStrength());
-                        if(winner.getClanTrophies() > monthClanMax[month]) monthClanMax[month] = winner.getClanTrophies();
-                    }  else {
-                        //s'il a perdu
-                        players.add(loser.getPlayerId());
-                        weeklyPlayers.get(week).add(loser.getPlayerId());
-                        monthlyPlayers.get(month).add(loser.getPlayerId());
-                    }
-                    games++;
-                    weekGames[week]++;
-                    monthGames[month]++;
-                }
+                stats.clan = Math.max(stats.clan, game.clan);
+                stats.strength += game.strength;
             }
-            //données globales du deck
-            if(games >= 10){
-                double meanStrength = (Double) strength / games;
-                DeckAnalysisWritable daw = new DeckAnalysisWritable(key.toString(), victories, games, players.size(), clanMax, meanStrength);
-                context.write(key, daw);
-            }
-            //données hebdomadaires
-            for(int i = 0; i < 53; i++){
-                if(weekGames[i] >= 10){
-                    double meanStrength = (Double) weekStrength[i] / weekGames[i];
-                    DeckAnalysisWritable daw = new DeckAnalysisWritable(key.toString(), weekVictories[i], weekGames[i], weeklyPlayers.get(i).size(), weekClanMax[i], meanStrength);
-                    //les semaines ont un id entre 0 et 52
-                    int weekId = i;
-                    Text weekKey = new Text(weekId + " " + key.toString());
-                    context.write(weekKey, daw);
-                }
-            }
-            //données mensuelles
-            for(int i = 0; i < 12; i++){
-                if(monthGames[i] >= 10){
-                    double meanStrength = (Double) monthStrength[i] / monthGames[i];
-                    DeckAnalysisWritable daw = new DeckAnalysisWritable(key.toString(), monthVictories[i], monthGames[i], monthlyPlayers.get(i).size(), monthClanMax[i], meanStrength);
-                    //les mois ont un id entre 53 et 64
-                    int monthId = i + 53;
-                    Text monthKey = new Text(monthId + " " + key.toString());
-                    context.write(monthKey, daw);
-                }
-            }
+            context.write(key, stats);
         }
     }
 
@@ -206,10 +132,10 @@ public class GameAnalysis {
         job.setJarByClass(GameAnalysis.class);
         job.setMapperClass(AnalysisMapper.class);
         job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(GameWritable.class);
+        job.setMapOutputValueClass(StatsWritable.class);
         job.setReducerClass(AnalysisReducer.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(DeckAnalysisWritable.class);
+        job.setOutputValueClass(StatsWritable.class);
         job.setOutputFormatClass(SequenceFileOutputFormat.class);
         job.setInputFormatClass(SequenceFileInputFormat.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));

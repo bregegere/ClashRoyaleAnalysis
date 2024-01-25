@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 
 public class DeckTopK {
 
-    private static String TABLE_NAME = "tbregegere:clashroyale_test"; //IL FAUT CHANGER LE NAMESPACE
+    private static String TABLE_NAME = "tbregegere:clashroyale_test3"; //IL FAUT CHANGER LE NAMESPACE
 
     public static void createOrOverwrite(Admin admin, HTableDescriptor table) throws IOException {
 		if (admin.tableExists(table.getTableName())) {
@@ -63,66 +63,66 @@ public class DeckTopK {
 		}
 	}
 
-    protected static Comparator ratio = new Comparator<DeckAnalysisWritable>() {
-            public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                int compared = Double.compare(((double) deck1.getVictories()) / deck1.getGames(), ((double) deck2.getVictories()) / deck2.getGames());
+    protected static Comparator ratio = new Comparator<StatsWritable>() {
+            public int compare(StatsWritable deck1, StatsWritable deck2){
+                int compared = Double.compare(((double) deck1.victories) / deck1.games, ((double) deck2.victories) / deck2.games);
                 if(compared != 0) return compared;
-                else return deck1.getDeck().compareTo(deck2.getDeck());
+                else return deck1.cards.compareTo(deck2.cards);
             }
     };
 
-    protected static  Comparator victories = new Comparator<DeckAnalysisWritable>() {
-            public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                int compared = Integer.compare(deck1.getVictories(), deck2.getVictories());
+    protected static  Comparator victories = new Comparator<StatsWritable>() {
+            public int compare(StatsWritable deck1, StatsWritable deck2){
+                int compared = Integer.compare(deck1.victories, deck2.victories);
                 if(compared != 0) return compared;
-                else return deck1.getDeck().compareTo(deck2.getDeck());
+                else return deck1.cards.compareTo(deck2.cards);
             }
     };
 
-    protected static Comparator games = new Comparator<DeckAnalysisWritable>() {
-            public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                int compared = Integer.compare(deck1.getGames(), deck2.getGames());
+    protected static Comparator games = new Comparator<StatsWritable>() {
+            public int compare(StatsWritable deck1, StatsWritable deck2){
+                int compared = Integer.compare(deck1.games, deck2.games);
                 if(compared != 0) return compared;
-                else return deck1.getDeck().compareTo(deck2.getDeck());
+                else return deck1.cards.compareTo(deck2.cards);
             }
     };
 
-    protected static Comparator players = new Comparator<DeckAnalysisWritable>() {
-            public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                int compared = Integer.compare(deck1.getPlayers(), deck2.getPlayers());
+    protected static Comparator players = new Comparator<StatsWritable>() {
+            public int compare(StatsWritable deck1, StatsWritable deck2){
+                int compared = Integer.compare(deck1.players.size(), deck2.players.size());
                 if(compared != 0) return compared;
-                else return deck1.getDeck().compareTo(deck2.getDeck());
+                else return deck1.cards.compareTo(deck2.cards);
             }
     };
 
-    protected static Comparator clanMax = new Comparator<DeckAnalysisWritable>() {
-            public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                int compared = Integer.compare(deck1.getClan(), deck2.getClan());
+    protected static Comparator clanMax = new Comparator<StatsWritable>() {
+            public int compare(StatsWritable deck1, StatsWritable deck2){
+                int compared = Integer.compare(deck1.clan, deck2.clan);
                 if(compared != 0) return compared;
-                else return deck1.getDeck().compareTo(deck2.getDeck());
+                else return deck1.cards.compareTo(deck2.cards);
             }
     };
 
-    protected static Comparator strength = new Comparator<DeckAnalysisWritable>() {
-            public int compare(DeckAnalysisWritable deck1, DeckAnalysisWritable deck2){
-                int compared = Double.compare((-1 * deck1.getDeltaStrength()), -1 * deck2.getDeltaStrength());
+    protected static Comparator strength = new Comparator<StatsWritable>() {
+            public int compare(StatsWritable deck1, StatsWritable deck2){
+                int compared = Double.compare((-1 * (deck1.strength / deck1.victories)), -1 * (deck2.strength / deck2.victories));
                 if(compared != 0) return compared;
-                else return deck1.getDeck().compareTo(deck2.getDeck());
+                else return deck1.cards.compareTo(deck2.cards);
             }
     };
 
 
-    public static class TopKMapper extends Mapper<Text, DeckAnalysisWritable, Text, DeckAnalysisWritable>{
+    public static class TopKMapper extends Mapper<Text, StatsWritable, Text, StatsWritable>{
 
         private int k;
 
-        private List<TreeSet<DeckAnalysisWritable>> decks;
-        private List<TreeSet<DeckAnalysisWritable>> weekDecksRatio = new ArrayList<>();
-        private List<TreeSet<DeckAnalysisWritable>> weekDecksVictories = new ArrayList<>();
-        private List<TreeSet<DeckAnalysisWritable>> weekDecksGames = new ArrayList<>();
-        private List<TreeSet<DeckAnalysisWritable>> weekDecksPlayers = new ArrayList<>();
-        private List<TreeSet<DeckAnalysisWritable>> weekDecksclanMax = new ArrayList<>();
-        private List<TreeSet<DeckAnalysisWritable>> weekDecksStrength = new ArrayList<>();
+        private List<TreeSet<StatsWritable>> decks;
+        private List<TreeSet<StatsWritable>> weekDecksRatio = new ArrayList<>();
+        private List<TreeSet<StatsWritable>> weekDecksVictories = new ArrayList<>();
+        private List<TreeSet<StatsWritable>> weekDecksGames = new ArrayList<>();
+        private List<TreeSet<StatsWritable>> weekDecksPlayers = new ArrayList<>();
+        private List<TreeSet<StatsWritable>> weekDecksclanMax = new ArrayList<>();
+        private List<TreeSet<StatsWritable>> weekDecksStrength = new ArrayList<>();
 
         
 
@@ -142,7 +142,7 @@ public class DeckTopK {
             }
         }
 
-        protected void addAllTypesOfTree(List<TreeSet<DeckAnalysisWritable>> list){
+        protected void addAllTypesOfTree(List<TreeSet<StatsWritable>> list){
             list.add(new TreeSet<>(DeckTopK.ratio));
             list.add(new TreeSet<>(DeckTopK.victories));
             list.add(new TreeSet<>(DeckTopK.games));
@@ -152,19 +152,21 @@ public class DeckTopK {
         }
 
         @Override
-        public void map(Text key, DeckAnalysisWritable value, Context context) throws IOException, InterruptedException{
+        public void map(Text key, StatsWritable value, Context context) throws IOException, InterruptedException{
             try{
-                int topKey = -1;
-                String[] tokens = key.toString().split(" ");
-                if(tokens.length == 2) topKey = Integer.parseInt(tokens[0]);
-                DeckAnalysisWritable deckClone = (DeckAnalysisWritable) value.clone();
-                addToAllTrees(deckClone, topKey);
-            } catch (CloneNotSupportedException e){
+                if(value.games >= 10){
+                    int topKey = -1;
+                    String[] tokens = key.toString().split(" ");
+                    if(tokens.length == 2) topKey = Integer.parseInt(tokens[0]);
+                    StatsWritable deckClone = (StatsWritable) value.clone();
+                    addToAllTrees(deckClone, topKey);
+                }    
+            } catch (Exception e){
                 context.getCounter("debug", "clone").increment(1);
             }
         }
 
-        protected void addToAllTrees(DeckAnalysisWritable deckClone, int topKey){
+        protected void addToAllTrees(StatsWritable deckClone, int topKey){
             if(topKey == -1){
                 for(int i = 0; i < 6; i++){
                     decks.get(i).add(deckClone);
@@ -195,34 +197,34 @@ public class DeckTopK {
         @Override
         protected void cleanup(Context context) throws IOException, InterruptedException{
             for(int i = 0; i < 6; i++){
-                for(DeckAnalysisWritable deck: decks.get(i)){
+                for(StatsWritable deck: decks.get(i)){
                     Text key = new Text(0 + "-" + i);
                     context.write(key, deck);
                 }
             }
             for(int i = 0; i < 65; i++){
                 
-                for(DeckAnalysisWritable deck: weekDecksRatio.get(i)){
+                for(StatsWritable deck: weekDecksRatio.get(i)){
                     Text key = new Text(i+1 + "-" + 0);
                     context.write(key, deck);
                 }
-                for(DeckAnalysisWritable deck: weekDecksVictories.get(i)){
+                for(StatsWritable deck: weekDecksVictories.get(i)){
                     Text key = new Text(i+1 + "-" + 1);
                     context.write(key, deck);
                 }
-                for(DeckAnalysisWritable deck: weekDecksGames.get(i)){
+                for(StatsWritable deck: weekDecksGames.get(i)){
                     Text key = new Text(i+1 + "-" + 2);
                     context.write(key, deck);
                 }
-                for(DeckAnalysisWritable deck: weekDecksPlayers.get(i)){
+                for(StatsWritable deck: weekDecksPlayers.get(i)){
                     Text key = new Text(i+1 + "-" + 3);
                     context.write(key, deck);
                 }
-                for(DeckAnalysisWritable deck: weekDecksclanMax.get(i)){
+                for(StatsWritable deck: weekDecksclanMax.get(i)){
                     Text key = new Text(i+1 + "-" + 4);
                     context.write(key, deck);
                 }
-                for(DeckAnalysisWritable deck: weekDecksStrength.get(i)){
+                for(StatsWritable deck: weekDecksStrength.get(i)){
                     Text key = new Text(i+1 + "-" + 5);
                     context.write(key, deck);
                 }
@@ -230,7 +232,7 @@ public class DeckTopK {
         }
     }
 
-    public static class TopKReducer extends TableReducer<Text, DeckAnalysisWritable, Text>{
+    public static class TopKReducer extends TableReducer<Text, StatsWritable, Text>{
 
         private int k;
 
@@ -241,11 +243,11 @@ public class DeckTopK {
         }
 
         @Override
-        public void reduce(Text key, Iterable<DeckAnalysisWritable> values, Context context) throws IOException, InterruptedException{
+        public void reduce(Text key, Iterable<StatsWritable> values, Context context) throws IOException, InterruptedException{
             String[] tokens = key.toString().split("-");
             int week = Integer.parseInt(tokens[0]);
             int criteria = Integer.parseInt(tokens[1]);
-            TreeSet<DeckAnalysisWritable> decks;
+            TreeSet<StatsWritable> decks;
             switch(criteria){
                 case 0:
                     decks = new TreeSet<>(DeckTopK.ratio);
@@ -269,17 +271,17 @@ public class DeckTopK {
                     decks = new TreeSet<>(DeckTopK.ratio);
                     break;
             }
-            for(DeckAnalysisWritable deck: values){
+            for(StatsWritable deck: values){
                 try{
-                    DeckAnalysisWritable deckClone = (DeckAnalysisWritable) deck.clone();
+                    StatsWritable deckClone = (StatsWritable) deck.clone();
                     decks.add(deckClone);
                     if(decks.size() > k) decks.remove(decks.first());
-                } catch (CloneNotSupportedException e){
+                } catch (Exception e){
                     context.getCounter("debug", "clone").increment(1);
                 }
             }
             int i = 1;
-            for(DeckAnalysisWritable deck: decks.descendingSet()){
+            for(StatsWritable deck: decks.descendingSet()){
                 String rowKey;
                 if(week == 0){
                     rowKey = "global-" + criteria +  " #" + i;
@@ -291,12 +293,12 @@ public class DeckTopK {
                     rowKey = "month" + (week - 53) + "-" + criteria + " #" + i;
                 }
                 Put put = new Put(Bytes.toBytes(rowKey));
-                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("id"), Bytes.toBytes(deck.getDeck()));
-                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("victories"), Bytes.toBytes(Integer.toString(deck.getVictories())));
-                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("games"), Bytes.toBytes(Integer.toString(deck.getGames())));
-                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("players"), Bytes.toBytes(Integer.toString(deck.getPlayers())));
-                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("clanMax"), Bytes.toBytes(Integer.toString(deck.getClan())));
-                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("strength"), Bytes.toBytes(Double.toString(deck.getDeltaStrength())));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("id"), Bytes.toBytes(deck.cards));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("victories"), Bytes.toBytes(Integer.toString(deck.victories)));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("games"), Bytes.toBytes(Integer.toString(deck.games)));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("players"), Bytes.toBytes(Integer.toString(deck.players.size())));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("clanMax"), Bytes.toBytes(Integer.toString(deck.clan)));
+                put.addColumn(Bytes.toBytes("deck"), Bytes.toBytes("strength"), Bytes.toBytes(Double.toString(deck.strength / deck.victories)));
                 
                 context.write(key, put);
                 i++;
@@ -319,7 +321,7 @@ public class DeckTopK {
 		createTable(connection, TABLE_NAME);
         job.setMapperClass(TopKMapper.class);
         job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(DeckAnalysisWritable.class);
+        job.setMapOutputValueClass(StatsWritable.class);
         job.setInputFormatClass(SequenceFileInputFormat.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
 

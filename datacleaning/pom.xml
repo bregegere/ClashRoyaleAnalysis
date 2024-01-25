@@ -5,8 +5,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>DataCleaning</groupId>
-  <artifactId>clashroyale-spark</artifactId>
-  <version>1.0.0</version>
+  <artifactId>clashroyale-mapreduce</artifactId>
+  <version>1.2</version>
 
   <name>datacleaning</name>
   <!-- FIXME change it to the project's website -->
@@ -70,7 +70,7 @@
   			<configuration>
   				<archive>
   					<manifest>
-  						<mainClass>bigdata.Ngrams</mainClass>
+  						<mainClass>bigdata.CRAnalysis</mainClass>
   					</manifest>
   				</archive>
   			</configuration>

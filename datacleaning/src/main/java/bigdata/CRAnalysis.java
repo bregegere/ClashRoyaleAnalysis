@@ -39,7 +39,8 @@ public class CRAnalysis {
         job1.setOutputValueClass(GameWritable.class);
         job1.setOutputFormatClass(SequenceFileOutputFormat.class);
         job1.setInputFormatClass(TextInputFormat.class);
-        FileInputFormat.addInputPath(job1, new Path("/user/auber/data_ple/clashroyale/gdc_battles.nljson"));
+        FileInputFormat.setInputDirRecursive(job1, true);
+        FileInputFormat.addInputPath(job1, new Path("/user/auber/data_ple/clashroyale"));
         FileOutputFormat.setOutputPath(job1, new Path(tmpDirectory + "/datacleaning"));
         if(!job1.waitForCompletion(true)){
             System.exit(1);
@@ -50,10 +51,10 @@ public class CRAnalysis {
         job2.setJarByClass(GameAnalysis.class);
         job2.setMapperClass(AnalysisMapper.class);
         job2.setMapOutputKeyClass(Text.class);
-        job2.setMapOutputValueClass(GameWritable.class);
+        job2.setMapOutputValueClass(StatsWritable.class);
         job2.setReducerClass(AnalysisReducer.class);
         job2.setOutputKeyClass(Text.class);
-        job2.setOutputValueClass(DeckAnalysisWritable.class);
+        job2.setOutputValueClass(StatsWritable.class);
         job2.setOutputFormatClass(SequenceFileOutputFormat.class);
         job2.setInputFormatClass(SequenceFileInputFormat.class);
         FileInputFormat.addInputPath(job2, new Path(tmpDirectory + "/datacleaning/part-r-00000"));
@@ -73,7 +74,7 @@ public class CRAnalysis {
 		DeckTopK.createTable(connection, TABLE_NAME);
         job3.setMapperClass(TopKMapper.class);
         job3.setMapOutputKeyClass(Text.class);
-        job3.setMapOutputValueClass(DeckAnalysisWritable.class);
+        job3.setMapOutputValueClass(StatsWritable.class);
         job3.setInputFormatClass(SequenceFileInputFormat.class);
         FileInputFormat.addInputPath(job3, new Path(tmpDirectory + "/game-analysis/part-r-00000"));
 

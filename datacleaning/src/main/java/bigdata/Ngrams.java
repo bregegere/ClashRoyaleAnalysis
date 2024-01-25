@@ -28,7 +28,10 @@ import org.apache.hadoop.mapreduce.Job;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.*;
 
 import org.apache.hadoop.io.Text;
 
@@ -37,7 +40,7 @@ import scala.Tuple2;
 
 public class Ngrams {
     public static final byte[] DECK_FAMILY = Bytes.toBytes("deck");
-    public static final String TABLE_NAME = "tbregegere:sparkDECK";
+    public static final String TABLE_NAME = "tbregegere:sparkDECK2";
 
     public static void createTable(Connection connect) {
 			try {
@@ -104,7 +107,7 @@ public class Ngrams {
                     List<String> cards = new ArrayList<>(Arrays.asList(deck.split("(?<=\\G..)")));
 
                     for (int size = 1; size <= 7; size++) {
-                        List<String> combinaisons = generateCombinations(cards, size);
+                        Set<String> combinaisons = generateCombinations(cards, size);
 
                         for (String ntuple : combinaisons) {
                                 String complete_ntuple = week + " " + ntuple;
@@ -148,22 +151,23 @@ public class Ngrams {
 
     }
 
-    public static List<String> generateCombinations(List<String> cards, int size) {
-            List<String> combinations = new ArrayList<>();
+    public static Set<String> generateCombinations(List<String> cards, int size) {
+            Set<String> combinations = new HashSet<String>();
             generateCombinationsHelper(cards, size, 0, new ArrayList<>(), combinations);
             return combinations;
         }
     
-    public static void generateCombinationsHelper(List<String> cards, int size, int index, List<String> currentCombination, List<String> combinations) {
+    public static void generateCombinationsHelper(List<String> cards, int size, int index, List<String> currentCombination, Set<String> combinations) {
             if (size == 0) {
-                combinations.add(String.join("", currentCombination));
+                String[] ordered = Stream.of(currentCombination.toArray()).sorted().toArray(String[]::new);
+                combinations.add(String.join("", ordered));
                 return;
             }
     
             for (int i = index; i < cards.size(); i++) {
                 currentCombination.add(cards.get(i));
                 generateCombinationsHelper(cards, size - 1, i + 1, currentCombination, combinations);
-                currentCombination.remove(currentCombination.size() - 1);
+                currentCombination.remove(cards.get(i));
             }
     }
         
