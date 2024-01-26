@@ -29,7 +29,7 @@ public class CRAnalysis {
 
         Configuration conf = new Configuration();
         Job job1 = Job.getInstance(conf, "CRDataCleaning");
-        job1.setNumReduceTasks(1);
+        job1.setNumReduceTasks(4);
         job1.setJarByClass(DataCleaning.class);
         job1.setMapperClass(DCMapper.class);
         job1.setMapOutputKeyClass(Text.class);
@@ -47,7 +47,7 @@ public class CRAnalysis {
         }
 
         Job job2 = Job.getInstance(conf, "CRGameAnalysis");
-        job2.setNumReduceTasks(1);
+        job2.setNumReduceTasks(8);
         job2.setJarByClass(GameAnalysis.class);
         job2.setMapperClass(AnalysisMapper.class);
         job2.setMapOutputKeyClass(Text.class);
@@ -57,7 +57,8 @@ public class CRAnalysis {
         job2.setOutputValueClass(StatsWritable.class);
         job2.setOutputFormatClass(SequenceFileOutputFormat.class);
         job2.setInputFormatClass(SequenceFileInputFormat.class);
-        FileInputFormat.addInputPath(job2, new Path(tmpDirectory + "/datacleaning/part-r-00000"));
+        FileInputFormat.setInputDirRecursive(job2, true);
+        FileInputFormat.addInputPath(job2, new Path(tmpDirectory + "/datacleaning"));
         FileOutputFormat.setOutputPath(job2, new Path(tmpDirectory + "/game-analysis"));
         if(!job2.waitForCompletion(true)){
             System.exit(1);
@@ -76,7 +77,8 @@ public class CRAnalysis {
         job3.setMapOutputKeyClass(Text.class);
         job3.setMapOutputValueClass(StatsWritable.class);
         job3.setInputFormatClass(SequenceFileInputFormat.class);
-        FileInputFormat.addInputPath(job3, new Path(tmpDirectory + "/game-analysis/part-r-00000"));
+        FileInputFormat.setInputDirRecursive(job3, true);
+        FileInputFormat.addInputPath(job3, new Path(tmpDirectory + "/game-analysis"));
 
         TableMapReduceUtil.initTableReducerJob(TABLE_NAME, TopKReducer.class, job3);
 

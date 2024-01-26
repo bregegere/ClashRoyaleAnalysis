@@ -4,10 +4,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashSet;
+import java.io.Serializable;
 
 import org.apache.hadoop.io.Writable;
 
-public class StatsWritable implements Cloneable, Writable{
+public class StatsWritable implements Cloneable, Writable, Serializable{
     public String cards;
     public int games;
     public int victories;
@@ -70,13 +71,14 @@ public class StatsWritable implements Cloneable, Writable{
 
     public String text(){
         StringBuilder sb = new StringBuilder();
+        sb.append(this.cards + " ");
         sb.append(this.victories + " ");
         sb.append(this.games + " ");
-        sb.append(this.players.size() + " {");
+        sb.append(this.players.size() + " ");
         for(String player: players){
             sb.append(player + ";");
         }
-        sb.append("} ");
+        sb.append(" ");
         sb.append(this.clan + " ");
         sb.append(this.strength);
         return sb.toString();

@@ -40,7 +40,7 @@ import scala.Tuple2;
 
 public class Ngrams {
     public static final byte[] DECK_FAMILY = Bytes.toBytes("deck");
-    public static final String TABLE_NAME = "tbregegere:sparkDECK2";
+    public static String TABLE_NAME;
 
     public static void createTable(Connection connect) {
 			try {
@@ -70,16 +70,19 @@ public class Ngrams {
             //we'll add two columns for this line, city:name (name is the name of the
             //column, city is the family) and population:total
             String tokens[] = x._2().split(" ");
+            Double delta = Double.parseDouble(tokens[6]) / Integer.parseInt(tokens[1]);
             put.addColumn(DECK_FAMILY, Bytes.toBytes("deck"), Bytes.toBytes(x._1().split(" ")[1]));
             put.addColumn(DECK_FAMILY, Bytes.toBytes("victories"), Bytes.toBytes(tokens[1]));
             put.addColumn(DECK_FAMILY, Bytes.toBytes("games"), Bytes.toBytes(tokens[2]));
             put.addColumn(DECK_FAMILY, Bytes.toBytes("players"), Bytes.toBytes(tokens[3]));
-            put.addColumn(DECK_FAMILY, Bytes.toBytes("clan"), Bytes.toBytes(tokens[4]));
-            put.addColumn(DECK_FAMILY, Bytes.toBytes("strength"), Bytes.toBytes(tokens[5]));
+            put.addColumn(DECK_FAMILY, Bytes.toBytes("clan"), Bytes.toBytes(tokens[5]));
+            put.addColumn(DECK_FAMILY, Bytes.toBytes("strength"), Bytes.toBytes(String.valueOf(delta)));
             return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);
         }
 
     public static void main(String[] args) throws Exception {
+        TABLE_NAME = args[1];
+
         Configuration conf_hbase = HBaseConfiguration.create();
 		conf_hbase.set("hbase.mapred.outputtable", TABLE_NAME);
 		conf_hbase.set("mapreduce.outputformat.class", "org.apache.hadoop.hbase.mapreduce.TableOutputFormat");
@@ -90,15 +93,21 @@ public class Ngrams {
         JavaSparkContext context = new JavaSparkContext(conf);
 
         String tmpDirectory = args[0];
+        TABLE_NAME = args[1];
 
-        JavaPairRDD<Text, DeckAnalysisWritable> inputfile = context.sequenceFile(tmpDirectory + "/game-analysis/part-r-00000", Text.class, DeckAnalysisWritable.class);
-        JavaRDD<Tuple2<String, String>> rdd1 = inputfile.map((x) -> {
+        //JavaPairRDD<Text, DeckAnalysisWritable> inputfile = context.sequenceFile(tmpDirectory + "/game-analysis/part-r-00000", Text.class, StatsWritable.class);
+        JavaPairRDD<Text, StatsWritable> inputfile = context.sequenceFile(tmpDirectory + "/game-analysis", Text.class, StatsWritable.class, 20);
+        JavaRDD<Tuple2<String, StatsWritable>> rdd1 = inputfile.map((x) -> {
             String text = x._1().toString();
-            return new Tuple2<String, String>(text, x._2().text());
+            return new Tuple2<String, StatsWritable>(text, x._2());
         });
 
-        JavaRDD<Tuple2<String, String>> combinaisonsRDD = rdd1.flatMap((x) -> {
-            List<Tuple2<String, String>> results = new ArrayList<>();
+        System.out.println("Nombre de lignes : " + rdd1.count());
+
+        //rdd1 = rdd1.filter((x) -> )
+
+        JavaRDD<Tuple2<String, StatsWritable>> combinaisonsRDD = rdd1.flatMap((x) -> {
+            List<Tuple2<String, StatsWritable>> results = new ArrayList<>();
             String[] tokens = x._1().split(" ");
             if(tokens.length == 2){
                 int week = Integer.parseInt(tokens[0]);
@@ -111,17 +120,22 @@ public class Ngrams {
 
                         for (String ntuple : combinaisons) {
                                 String complete_ntuple = week + " " + ntuple;
-                                results.add(new Tuple2<>(complete_ntuple, x._2()));
-                            }
+                                StatsWritable stats = x._2().clone();
+                                stats.cards = ntuple;
+                                results.add(new Tuple2<>(complete_ntuple, stats));
                         }
                     }
+                    results.add(new Tuple2<>(x._1(), x._2()));
                 }
+            }
             
             return results.iterator();
 
         });
 
-        JavaPairRDD<String, String> rddByKey = JavaPairRDD.fromJavaRDD(combinaisonsRDD);
+        System.out.println("Nombre de combinaisons (doublons compris) : " + combinaisonsRDD.count());
+
+        JavaPairRDD<String, StatsWritable> rddByKey = JavaPairRDD.fromJavaRDD(combinaisonsRDD);
 
         JavaPairRDD<String, String> rddReduced = rddByKey.reduceByKey(new Function2<String, String, String>() {
             @Override
@@ -131,15 +145,35 @@ public class Ngrams {
                 String deck = tokens1[0];
                 int victories = Integer.parseInt(tokens1[1]) + Integer.parseInt(tokens2[1]);
                 int games = Integer.parseInt(tokens1[2]) + Integer.parseInt(tokens2[2]);
-                int clan = Math.max(Integer.parseInt(tokens1[4]), Integer.parseInt(tokens2[4]));
-                int players = Integer.parseInt(tokens1[3]) + Integer.parseInt(tokens2[3]);
-                double strength = (Double) (Double.parseDouble(tokens1[5]) + Double.parseDouble(tokens2[5])) / 2;
+                int clan = Math.max(Integer.parseInt(tokens1[5]), Integer.parseInt(tokens2[5]));
+                HashSet<String> distinctIds = new HashSet<>();
+                String[] playersId1 = tokens1[4].split(";");
+                for(String player: playersId1){
+                    if(player.length() > 0) distinctIds.add(player);
+                }
 
-                return deck + " " + victories + " " + games + " " + players + " " + clan + " " + strength;
+                String[] playersId2 = tokens2[4].split(";");
+                for(String player: playersId2){
+                    if(player.length() > 0) distinctIds.add(player);
+                }
+
+                int players = distinctIds.size();
+                StringBuilder sb = new StringBuilder();
+                for(String player: distinctIds){
+                    sb.append(player + ";");
+                }
+
+                double strength = Double.parseDouble(tokens1[6]) + Double.parseDouble(tokens2[6]);
+
+                return deck + " " + victories + " " + games + " " + players + " " + sb.toString() + " " + clan + " " + strength;
             }
         });
 
         System.out.println("Nombre de combinaisons : " + rddReduced.count());
+
+        JavaPairRDD<String, String> rddGamesFiltered = rddReduced.filter((x) -> Integer.parseInt(x._2().split(" ")[2]) >= 5);
+
+        System.out.println("Nombre de combinaisons à plus de 5 parties : " + rddGamesFiltered.count());
 
         createTable(connection);
 

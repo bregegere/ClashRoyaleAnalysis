@@ -154,7 +154,7 @@ public class DeckTopK {
         @Override
         public void map(Text key, StatsWritable value, Context context) throws IOException, InterruptedException{
             try{
-                if(value.games >= 10){
+                if(value.games >= 10 && value.victories > 0){
                     int topKey = -1;
                     String[] tokens = key.toString().split(" ");
                     if(tokens.length == 2) topKey = Integer.parseInt(tokens[0]);
